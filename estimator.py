@@ -2,7 +2,7 @@ import logging
 import math
 
 import slidingwindow as sw
-
+import pandas as pd
 import cv2
 import numpy as np
 import tensorflow as tf
@@ -375,32 +375,141 @@ class TfPoseEstimator:
         npimg_q /= (2.0 / 2 ** 8)
         # npimg_q += 0.5
         npimg_q = npimg_q.astype(np.uint8)
-        return npimg_q
+        return npimg_q 
+  
 
     @staticmethod
-    def draw_humans(npimg, humans, imgcopy=False):
+    def draw_humans(npimg, humans, count_frame, imgcopy=False):
         if imgcopy:
             npimg = np.copy(npimg)
-        image_h, image_w = npimg.shape[:2]
+        image_w, image_h = npimg.shape[:2]
+        # logger.info('size: {}x{}' . format(image_h, image_w))
         centers = {}
+        user_index = 0
+
+        def get_deg(val_a, val_b, val_a1, val_b1):
+            opposite = val_a1 - val_a
+            adjacent = val_b1 - val_b
+            hypotenuse = math.sqrt(pow(opposite, 2) + pow(adjacent, 2))
+            degree = math.asin(opposite / hypotenuse) * 180 / math.pi 
+            return degree
+
         for human in humans:
             # draw point
             for i in range(common.CocoPart.Background.value):
                 if i not in human.body_parts.keys():
                     continue
 
-                body_part = human.body_parts[i]
-                center = (int(body_part.x * image_w + 0.5), int(body_part.y * image_h + 0.5))
+                body_part = human.body_parts[i] # Get per skeleton
+                center = (int(body_part.x * image_w + 0.5), int(body_part.y * image_h + 0.5)) # Decide coordinate position to the image
+                # logger.info('body_part:{}x{}' . format(body_part.x, body_part.y))
                 centers[i] = center
-                cv2.circle(npimg, center, 3, common.CocoColors[i], thickness=3, lineType=8, shift=0)
-
+                if i in [8,9,10,11,12,13]:
+                    #logger.info('{}:{}={}' . format(npimg.shape, i, center))
+                    cv2.circle(npimg, center, 3, common.CocoColors[i], thickness=3, lineType=8, shift=0)
+                    cv2.putText(npimg, '{}' . format(i), center, cv2.FONT_HERSHEY_SIMPLEX, 0.51, (0,0,255))
+            
             # draw line
-            for pair_order, pair in enumerate(common.CocoPairsRender):
+	    #get = pd.DataFrame([], columns=[x.upper() for x in ['user', 
+            #                            'hip_right_x', 'hip_right_y', 'hip_left_x', 'hip_left_y', 
+            #                            'knee_right_x', 'knee_right_y', 'knee_left_x', 'knee_left_y',
+            #                            'ankle_right_x', 'ankle_right_y', 'ankle_left_x', 'ankle_left_y', 
+            #                            'time_stamp', 'count_frame']]) 
+            for pair_order, pair in enumerate(common.CocoPairsRender): # Get the index pair
                 if pair[0] not in human.body_parts.keys() or pair[1] not in human.body_parts.keys():
-                    continue
-
+                    continue 
                 # npimg = cv2.line(npimg, centers[pair[0]], centers[pair[1]], common.CocoColors[pair_order], 3)
                 cv2.line(npimg, centers[pair[0]], centers[pair[1]], common.CocoColors[pair_order], 3)
+                
+            
+            hip_right_x = np.nan # 8
+            hip_right_y = np.nan
+
+            hip_left_x = np.nan # 11
+            hip_left_y = np.nan
+
+            knee_right_x = np.nan # 9
+            knee_right_y = np.nan
+
+            knee_left_x = np.nan # 12
+            knee_left_y = np.nan
+
+            ankle_right_x = np.nan # 10
+            ankle_right_y = np.nan
+ 
+            ankle_left_x = np.nan # 13
+            ankle_left_y = np.nan
+
+
+            try: 
+               hip_right_x = centers[8][0] # 8
+               hip_right_y = centers[8][1] 
+            except:
+               pass
+            try:
+               hip_left_x = centers[11][0] # 11
+               hip_left_y = centers[11][1]
+            except:
+               pass
+            try:
+               knee_right_x = centers[9][0] # 9
+               knee_right_y = centers[9][1]
+            except:
+               pass
+            try:
+               knee_left_x = centers[12][0] # 12
+               knee_left_y = centers[12][1]
+            except:
+               pass
+            try:
+               ankle_right_x = centers[10][0] # 10
+               ankle_right_y = centers[10][1]
+            except:
+               pass
+            try:
+               ankle_left_x = centers[13][0] # 13
+               ankle_left_y = centers[13][1]
+               cv2.circle(npimg, (ankle_left_x, ankle_left_y), 3, (0,0,255), thickness=4, lineType=8, shift=0)
+            except:
+               pass     
+                 
+            df = pd.DataFrame(np.array([[user_index,
+                                     0, 0, 0, 0,
+                                     hip_right_x, hip_right_y, hip_left_x, hip_left_y, 
+                                     knee_right_x, knee_right_y, knee_left_x, knee_left_y,
+                                     ankle_right_x, ankle_right_y, ankle_left_x, ankle_left_y, 
+                                     0, 0, 0, 0,
+                                     0, 0, 0, 0,
+                                     0, count_frame]]).tolist(), columns=[x.upper() for x in ['user', 
+                                        'spine_base_x', 'spine_base_y', 'spine_mid_x', 'spine_mid_y',
+                                        'hip_right_x', 'hip_right_y', 'hip_left_x', 'hip_left_y', 
+                                        'knee_right_x', 'knee_right_y', 'knee_left_x', 'knee_left_y',
+                                        'ankle_right_x', 'ankle_right_y', 'ankle_left_x', 'ankle_left_y', 
+                                        'foot_right_x', 'foot_right_y', 'foot_left_x', 'foot_left_y',
+                                        'hip_knee_right', 'hip_knee_left', 'knee_ankle_right', 'knee_ankle_left',
+                                        'time_stamp', 'count_frame']])
+         
+            df.to_csv('images/output_video/output_video.csv', mode='a', header=False, index=False) # Ignore the index
+            try:
+               deg_right = get_deg(hip_right_x, hip_right_y, ankle_right_x, ankle_right_y)
+               deg_left = get_deg(hip_left_x, hip_left_y, ankle_left_x, ankle_left_y) 
+               #logger.info('{}, {}' . format(deg_right, deg_left))
+    
+               if deg_right > 0 and deg_left > 0:
+                  cv2.putText(npimg, "{}" . format('Right_'), (int(50), int(100)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 3) 
+
+               elif deg_right < -1 and deg_left < -1:
+                  cv2.putText(npimg, "{}" . format('Left_'), (int(50), int(100)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 3)  
+            
+                
+               elif deg_right <= 0 and deg_left >= 0:
+                  cv2.putText(npimg, "{}" . format('Normal_'), (int(50), int(100)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 3)  
+            except Exception as d:
+               logger.info(d)
+               pass
+            #logger.info(df)
+            #logger.info('{}\n' . format(centers)) 
+            user_index += 1
 
         return npimg
 
