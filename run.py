@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Mar 25 09:30:00 2019
+
+@author: Sevendi Eldrige Rifki Poluan
+"""
+
 import argparse
 import tensorflow as tf
 import sys
@@ -28,8 +35,6 @@ class MSS1407BLAB_Thread(object):
         self._t.join()
         return self._que.get()
 
- 
-
 logger = logging.getLogger('run')
 logger.setLevel(logging.DEBUG)
 ch = logging.StreamHandler()
@@ -44,18 +49,22 @@ def execute(tensor_peaks, hm_up, cpm_up, img, size, image, link_video, video_sav
                                                          feed_dict={raw_img: img, img_size: size})
     bodys = PoseEstimator.estimate_paf(peaks[0], heatmap[0], vectormap[0])
     image = TfPoseEstimator.draw_humans(image, bodys, imgcopy=False)
-    #logger.info('{}\n' . format(bodys[0]))
-    #fps = round(1 / (time.time() - time_n), 2)
-    #image = cv2.putText(image, str(fps)+'fps', (10, 15), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (255, 255, 255))
-    #time_n = time.time()
+
+    # logger.info('{}\n' . format(bodys[0]))
+    # fps = round(1 / (time.time() - time_n), 2)
+    # image = cv2.putText(image, str(fps)+'fps', (10, 15), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (255, 255, 255))
+    # time_n = time.time()
     
-    #if args.video is not None:
-    #    image[27:img_corner.shape[0]+27, :img_corner.shape[1]] = img_corner  # [3:-10, :]
+    # if args.video is not None:
+    #     image[27:img_corner.shape[0]+27, :img_corner.shape[1]] = img_corner  # [3:-10, :]
         
-    #cv2.imshow('Results', image)
+    # cv2.imshow('Results', image)
+
     if link_video is not None:
         video_saver.write(image)
+
         #cv2.imwrite('images/output_video/image_output_{}.jpg' . format(count), image)
+
         logger.infor('Frame saved!')
          
 
@@ -70,7 +79,9 @@ if __name__ == '__main__':
     parser.add_argument('--checkpoint_path', type=str, default='checkpoints/train/')
     parser.add_argument('--backbone_net_ckpt_path', type=str, default='checkpoints/vgg/vgg_19.ckpt')
     parser.add_argument('--image', type=str, default=None)
+
     # parser.add_argument('--run_model', type=str, default='img')
+    
     parser.add_argument('--video', type=str, default=None)
     parser.add_argument('--camera', type=str, default=None)
     parser.add_argument('--train_vgg', type=bool, default=True)
@@ -99,8 +110,10 @@ if __name__ == '__main__':
 
     hm_up = tf.image.resize_area(hm_pre[5], img_size)
     cpm_up = tf.image.resize_area(cpm_pre[5], img_size)
+
     # hm_up = hm_pre[5]
     # cpm_up = cpm_pre[5]
+
     smoother = Smoother({'data': hm_up}, 25, 3.0)
     gaussian_heatMat = smoother.get_output()
 
@@ -109,8 +122,10 @@ if __name__ == '__main__':
                                  tf.zeros_like(gaussian_heatMat))
 
     logger.info('initialize saver...')
+
     # trainable_var_list = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='openpose_layers')
     # trainable_var_list = []
+
     trainable_var_list = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='openpose_layers')
     if args.train_vgg:
         trainable_var_list = trainable_var_list + tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='vgg_19')
@@ -126,8 +141,6 @@ if __name__ == '__main__':
           os.remove('{}/{}' . format('images/output_video', i))
           logger.info('{}/{} has been removed.' . format('images/output_video', i))
 
-    
-    
     #### Set start index frame
     count = 352 
 
@@ -139,7 +152,9 @@ if __name__ == '__main__':
                                         'foot_right_x', 'foot_right_y', 'foot_left_x', 'foot_left_y',
                                         'hip_knee_right', 'hip_knee_left', 'knee_ankle_right', 'knee_ankle_left',
                                         'time_stamp', 'count_frame']])  
+
     address_file = open('images/output_video/output_video.csv', 'w')
+
     get.to_csv(address_file, index=False)
     address_file.close()
     time_stamp = ''
@@ -148,13 +163,16 @@ if __name__ == '__main__':
     second = 0
     milisecond = 0
     count_mil = 0
+
     with tf.Session(config=config) as sess:
         sess.run(tf.group(tf.global_variables_initializer()))
         logger.info('restoring vgg weights...')
         restorer.restore(sess, args.backbone_net_ckpt_path)
         logger.info('restoring from checkpoint...')
         saver.restore(sess, tf.train.latest_checkpoint(checkpoint_dir=checkpoint_path))
+
         # saver.restore(sess, args.checkpoint_path + 'model-55000.ckpt')
+
         logger.info('initialization done')
         if args.image is None:
             if args.video is not None:
@@ -162,39 +180,55 @@ if __name__ == '__main__':
                 cap = cv2.VideoCapture(args.video)
             if args.camera is not None:
                 cap = cv2.VideoCapture(0)
+
                 # cap = cv2.VideoCapture('mplayer tv:// -tv driver=v4l2:width=640:height=480:device=/dev/video0')
-            #_, image = cap.read()
-            #if image is None:
-                #logger.error("Can't read video, path=%s" % args.save_video)
-                #sys.exit(-1)
+            # _, image = cap.read()
+            # if image is None:
+                # logger.error("Can't read video, path=%s" % args.save_video)
+                # sys.exit(-1)
+
             fps = cap.get(cv2.CAP_PROP_FPS)
             ori_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             ori_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
             if args.save_video is not None:
-                #fourcc = cv2.VideoWriter_fourcc(*'MP4V')
+
+                # fourcc = cv2.VideoWriter_fourcc(*'MP4V')
+
                 fourcc = cv2.VideoWriter_fourcc('M','J','P','G') 
-                #logger.info('{}, {}' . format(ori_w, ori_h))
+
+                # logger.info('{}, {}' . format(ori_w, ori_h))
+
                 out = cv2.VideoWriter(args.save_video, fourcc, fps, (ori_w, ori_h))
                 logger.info('record video to %s' % args.save_video)
+
             logger.info('fps@%f' % fps)
+
             # size = [int(654 * (ori_h / ori_w)), 654]
+
             size = [ori_w, ori_h] # (width, height)
+
             # h = int(654 * (ori_h / ori_w))
+
             time_n = time.time()  
             
             while True:
-                #time_stamp = '{}:{}:{}:{}' . format(
-						#'0{}' . format(hour) if len(str(hour)) == 1 else hour, 
-						#'0{}' . format(minute) if len(str(minute)) == 1 else minute, 
-						#'0{}' . format(second) if len(str(second)) == 1 else second, 
-						#'{}' . format(milisecond) if len(str(milisecond)) == 1 else milisecond)
+
+                # time_stamp = '{}:{}:{}:{}' . format(
+                        # '0{}' . format(hour) if len(str(hour)) == 1 else hour, 
+                        # '0{}' . format(minute) if len(str(minute)) == 1 else minute, 
+                        # '0{}' . format(second) if len(str(second)) == 1 else second, 
+                        # '{}' . format(milisecond) if len(str(milisecond)) == 1 else milisecond)
                 try: 
                     _, image = cap.read()
+
                     # img = np.array(cv2.resize(image, (654, h)))
+
                     img = np.array(image)
+
                     # cv2.imshow('Original', img) 
-                    #img_corner = np.array(cv2.resize(image, (360, int(360*(ori_h/ori_w)))))
+                    # img_corner = np.array(cv2.resize(image, (360, int(360*(ori_h/ori_w)))))
+                    
                     img = img[np.newaxis, :]
 
                     peaks, heatmap, vectormap = sess.run([tensor_peaks, hm_up, cpm_up],
@@ -206,29 +240,33 @@ if __name__ == '__main__':
                         #cv2.imwrite('images/output_video/image_output_{}.jpg' . format(count), image)
                         logger.info('Frame at {} saved!' . format(count))
 
-                    #check = MSS1407BLAB_Thread(target=execute, args=[tensor_peaks, hm_up, cpm_up, img, size, image, args.save_video, video_saver]) 
-                    #threading.Thread(target=check_, args=[check]).start()
+                    # check = MSS1407BLAB_Thread(target=execute, args=[tensor_peaks, hm_up, cpm_up, img, size, image, args.save_video, video_saver]) 
+                    # threading.Thread(target=check_, args=[check]).start()
 
                     if args.video is not None:
-                    	cv2.waitKey(1)
+                        cv2.waitKey(1)
+
                     if args.camera is not None: # Used for direct camera only
-                    	c = cv2.waitKey(0)
-                    	if c == 27: # Wait for esc key
+                        c = cv2.waitKey(0)
+                        if c == 27: # Wait for esc key
                             logger.info('yah noh')
                             out.release()
                             cv2.destroyAllWindows()
                             break
                  
-                    #if count == 4: 
-                        #out.release()
-                        #cv2.destroyAllWindows()
-                        #break
+                    # if count == 4: 
+                        # out.release()
+                        # cv2.destroyAllWindows()
+                        # break
+
                     count += 1
+                    
                 except Exception as ex: 
                     logger.info(ex)
                     out.release()
                     cv2.destroyAllWindows()
                     break
+
                 # Time stamp processing
                 if (milisecond == 1 or milisecond == 3 or milisecond == 7) and count_mil < 1:
                      milisecond = milisecond
@@ -248,7 +286,9 @@ if __name__ == '__main__':
                 
         else:
             image = common.read_imgfile(args.image)
+
             #image = cv2.flip(image, 1)
+
             size = [image.shape[0], image.shape[1]]
             logger.info(size)
             if image is None:
@@ -259,7 +299,9 @@ if __name__ == '__main__':
             cv2.imshow('Original Image', img)
             img = img[np.newaxis, :]
             peaks, heatmap, vectormap = sess.run([tensor_peaks, hm_up, cpm_up], feed_dict={raw_img: img, img_size: size})
-            #cv2.imshow('Vector mapping', vectormap[0, :, :, 0])
+
+            # cv2.imshow('Vector mapping', vectormap[0, :, :, 0])
+            
             bodys = PoseEstimator.estimate_paf(peaks[0], heatmap[0], vectormap[0])
             image = TfPoseEstimator.draw_humans(image, bodys, 0, imgcopy=False)
             cv2.imwrite('images/output_image/image_output.jpg', image)
